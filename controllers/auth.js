@@ -64,7 +64,7 @@ const user = db.collection("users");
     // console.log(x);
     // user.add();
    
-        // user.add(userSchema);
+        user.add(userSchema);
         return res.status(201).json(data);
 
     })

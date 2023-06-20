@@ -18,6 +18,10 @@ app.use(bodyParser.json());
     res.json(["Tony","Lisa","Michael","Ginger","Food"]);
    });
 
+   app.get("/rest", (req, res, next) => {
+    res.json(["MERCEDES","AUDI","BMW"]);
+   });
+
 // Port
 const port = 3000;
 
