@@ -283,3 +283,7 @@ exports.updateuserdetails=(req,res)=>{
         }
     })
 }
+
+exports.rest=(req, res, next) => {
+    res.json(["MERCEDES","AUDI","BMW"]);
+   };

@@ -13,7 +13,8 @@ const{
     upsert,
     insertuserdetails,
     updateuserdetails,
-    upsertuser
+    upsertuser,
+    rest
 
 } = require("../controllers/auth");
 
@@ -28,6 +29,7 @@ router.put("/upsert",upsert);
 router.post("/insertuser",insertuserdetails);
 router.patch("/updateuser",updateuserdetails);
 router.put("/upsertuser",upsertuser);
+router.get("/rest",rest);
 
 
 
