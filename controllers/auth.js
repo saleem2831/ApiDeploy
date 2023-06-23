@@ -16,68 +16,74 @@ const user = db.collection("users");
             password:"Password is Required"
         }); 
     }
-   
-    // user.add(data2)
-    // res.send({msg:"user Added"});
-    firebase
-    .auth()
-    .createUserWithEmailAndPassword(req.body.email,req.body.password)
-    .then(function(data){
-        firebase.auth().currentUser.sendEmailVerification()
-       .then(() => {
-           // Email verification sent!
-           console.log('Email Verification sent! Check your mail box');
-           // ...
-       });
-       const date_time = new Date();
-       const userSchema = {
-               firstName:req.body.firstName,
-               lastName:req.body.lastName,
-               nickName:req.body.nickName,
-               email:data.user.email,
-               profilePic:req.body.profilePic,
-               phoneNo:req.body.phoneNo,
-               countryCode:"+91",
-               dob:req.body.dob,
-               city:req.body.city,   
-               pincode:req.body.pincode,
-               userID:data.user.uid,
-               password:data.user.providerId,
-               points:0,
-               isMailVerified:data.user.emailVerified,
-               userRole:req.body.userRole,
-               tnCSignDate:date_time,
-               isTnCAccepted:req.body.isTnCAccepted,
-               subscribedChannels:req.body.subscribedChannels,
-               createdAt:date_time,
-               updatedAt:date_time,
-            //    accessToken:data.user.stsTokenManager.accessToken,
-               refreshToken:data.user.refreshToken        
-       }
 
-    //    console.log("access token:",data.user.stsTokenManager);
-       console.log("data of users",userSchema);
-    //    user.add(userSchema);
-    //    const data2 = req.body;
-    // console.log("data of users",data2);
-    // const x=user.add(data2);
-    // console.log(x);
-    // user.add();
-   
-        user.add(userSchema);
-        return res.status(201).json(data);
 
-    })
-    .catch(function(error){
-        let errorCode = error.code;
-        let errorMessage = error.message;
-        if(errorCode=="auth/weak-password"){
-            return res.status(500).json({error:errorMessage});
+    const email = req.body.email;
+    const sql = 'SELECT COUNT(*) AS count FROM userData WHERE email = ?';
+    mySqlConnection.query(sql, [email], (error, results) => {
+
+		const count = results[0].count;
+
+		if( count === 1){
+        console.log("email exist in db");
+        var user=req.body;
+        const updateQuery='update userData set firstName= ?,lastName= ?,nickName= ?,profilepic= ?,phoneNo= ?,countryCode= ?,dob = ?,city= ?,pincode= ?,password= ?,points= ?,isMailVerified= ?,userRole= ?,isTnCAccepted = ?,subscribedChannels = ? where email = ?';
+        mySqlConnection.query( updateQuery,[user.firstName,user.lastName,user.nickName,user.profilePic,user.phoneNo,user.countryCode,user.dob,user.city,user.pincode,user.password,user.points,user.isMailVerified,user.userRole,user.isTnCAccepted,user.subscribedChannels,email],(err,rows)=>{
+            if(err){
+                console.log(err);
+            }
+            else{
+                // console.log(rows);
+                // res.send(rows);
+                console.log('data Updated Successfully');
+            }
+        })
+        return res.json({ message: "Email Already Exist" });
         }
         else{
-            return res.status(500).json({error:errorMessage});
+            console.log("doesnit Exist!!")
+            firebase
+            .auth()
+            .createUserWithEmailAndPassword(req.body.email,req.body.password)
+            .then(function(data){
+                firebase.auth().currentUser.sendEmailVerification()
+               .then(() => {
+                   // Email verification sent!
+                   console.log('Email Verification sent! Check your mail box');
+                   // ...
+               });
+               const date_time = new Date();
+               var user=req.body;
+               var userData=[data.user.uid,user.firstName,user.lastName,user.nickName,data.user.email,user.profilePic,user.phoneNo,"+91",user.dob,user.city,user.pincode,data.user.providerId,0,data.user.emailVerified,user.userRole,date_time,user.isTnCAccepted,user.subscribedChannels,date_time,date_time,data.user.refreshToken,user.accessToken];
+                  mySqlConnection.query("insert into userData(userID,firstName,lastName,nickName,email,profilePic,phoneNo,countryCode,dob,city,pincode,password,points,isMailVerified,userRole,tnCSignDate,isTnCAccepted,subscribedChannels,createdAt,updatedAt,refreshToken,accessToken ) values(?)",[userData],(err,rows)=>{
+                      if(err){
+                          console.log(err);
+                          console.log("error kya ayaa")
+                      }
+                      else{
+                          console.log(rows);
+                       //    res.send(rows);
+                          console.log('data Inserted Successfully');
+                      }
+                  })
+
+                return res.status(201).json(data);
+        
+            })
+            .catch(function(error){
+                let errorCode = error.code;
+                let errorMessage = error.message;
+                if(errorCode=="auth/weak-password"){
+                    return res.status(500).json({error:errorMessage});
+                }
+                else{
+                    return res.status(500).json({error:errorMessage});
+                }
+            });
         }
-    });
+	});
+
+
 };
 
 
@@ -95,6 +101,31 @@ exports.signin=(req,res)=>{
     .auth()
     .signInWithEmailAndPassword(req.body.email,req.body.password)
     .then((user)=>{
+        if(user.user.emailVerified==false){
+            console.log("True");
+            const updEmailVerify = 'update userData set isMailVerified = ?'
+            mySqlConnection.query( updEmailVerify,[true],(err,rows)=>{
+                if(err){
+                    console.log(err);
+                }
+                else{
+                    console.log('email verified Updated Successfully');
+                }
+            })
+        }
+        else{
+            console.log("False");
+        }
+        const updRefreshToken = 'update userData set refreshToken = ?'
+            mySqlConnection.query( updRefreshToken,[user.user.refreshToken],(err,rows)=>{
+                if(err){
+                    console.log(err);
+                }
+                else{
+                    console.log('Refresh Token Updated Successfully');
+                }
+            })
+        console.log(user.user.refreshToken);
         return res.status(201).json(user.user);
     })
     .catch(function(error){
@@ -284,6 +315,46 @@ exports.updateuserdetails=(req,res)=>{
     })
 }
 
-exports.rest=(req, res, next) => {
-    res.json(["MERCEDES","AUDI","BMW"]);
-   };
+//////////////////////////////////
+// var user=req.body;
+// mySqlConnection.query("update userData set ? where id ="+user.userID,[user],(err,rows)=>{
+//     if(err){
+//         console.log(err);
+//     }
+//     else{
+//         if(rows.affectedRows==0){
+//             var userData=[data.user.uid,user.firstName,user.lastName,user.nickName,data.user.email,user.profilePic,user.phoneNo,"+91",user.dob,user.city,user.pincode,data.user.providerId,0,data.user.emailVerified,user.userRole,date_time,user.isTnCAccepted,user.subscribedChannels,date_time,date_time,data.user.refreshToken,user.accessToken];
+//    mySqlConnection.query("insert into userData(userID,firstName,lastName,nickName,email,profilePic,phoneNo,countryCode,dob,city,pincode,password,points,isMailVerified,userRole,tnCSignDate,isTnCAccepted,subscribedChannels,createdAt,updatedAt,refreshToken,accessToken ) values(?)",[userData],(err,rows)=>{
+//                 if(err){
+//                     console.log(err);
+//                 }
+//                 else{
+//                     // console.log(rows);
+//                     res.send(rows);
+//                     console.log('data Inserted Successfully');
+//                 }
+//             })
+//         }else{
+//         res.send(rows);
+//         console.log('data Updated Successfully');
+//         }
+//     }
+// })
+
+
+// var user=req.body;
+// //    var userAtt= [userID,firstName,lastName,nickName,email,profilePic,phoneNo,countryCode,dob,city,pincode,password,points,isMailVerified,userRole,tnCSignDate,isTnCAccepted,subscribedChannels,createdAt,updatedAt,refreshToken,accessToken];
+//    var userData=[data.user.uid,user.firstName,user.lastName,user.nickName,data.user.email,user.profilePic,user.phoneNo,"+91",user.dob,user.city,user.pincode,data.user.providerId,0,data.user.emailVerified,user.userRole,date_time,user.isTnCAccepted,user.subscribedChannels,date_time,date_time,data.user.refreshToken,user.accessToken];
+//    mySqlConnection.query("insert into userData(userID,firstName,lastName,nickName,email,profilePic,phoneNo,countryCode,dob,city,pincode,password,points,isMailVerified,userRole,tnCSignDate,isTnCAccepted,subscribedChannels,createdAt,updatedAt,refreshToken,accessToken ) values(?)",[userData],(err,rows)=>{
+//        if(err){
+//            console.log(err);
+//            console.log("error kya ayaa")
+//        }
+//        else{
+//            console.log(rows);
+//         //    res.send(rows);
+//            console.log('data Inserted Successfully');
+//        }
+//    })
+
+
